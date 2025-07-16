@@ -11,12 +11,12 @@ const SignInScreen = () => {
   const { signIn, setActive, isLoaded } = useSignIn()
 
   const [email, setEmail] = useState("");
-  const [passoword, setPassword] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
-    if (!email || !passoword) {
+    if (!email || !password) {
       Alert.alert("Error", "Please fill all the fields");
       return
     }

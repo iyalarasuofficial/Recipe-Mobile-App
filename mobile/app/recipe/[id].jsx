@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 
 const RecipeDetailScreen = () => {
-  const { id: recipeId } = useLocalSearchParams();
+  const recipeId = useLocalSearchParams()?.id?.toString();
   const router = useRouter();
 
   const [recipe, setRecipe] = useState(null);
@@ -28,10 +28,17 @@ const RecipeDetailScreen = () => {
 
   useEffect(() => {
     const checkIfSaved = async () => {
+      if (!userId || !recipeId) return;
+
       try {
         const response = await fetch(`${API_URL}/favorites/${userId}`);
         const favorites = await response.json();
-        const isRecipeSaved = favorites.some((fav) => fav.recipeId === parseInt(recipeId));
+
+        if (!Array.isArray(favorites)) throw new Error("Invalid favorites data");
+
+        const isRecipeSaved = favorites.some(
+          (fav) => parseInt(fav.recipeId) === parseInt(recipeId)
+        );
         setIsSaved(isRecipeSaved);
       } catch (error) {
         console.error("Error checking if recipe is saved:", error);
@@ -44,12 +51,10 @@ const RecipeDetailScreen = () => {
         const mealData = await MealAPI.getMealById(recipeId);
         if (mealData) {
           const transformedRecipe = MealAPI.transformMealData(mealData);
-
           const recipeWithVideo = {
             ...transformedRecipe,
             youtubeUrl: mealData.strYoutube || null,
           };
-
           setRecipe(recipeWithVideo);
         }
       } catch (error) {
@@ -64,25 +69,22 @@ const RecipeDetailScreen = () => {
   }, [recipeId, userId]);
 
   const getYouTubeEmbedUrl = (url) => {
-    // example url: https://www.youtube.com/watch?v=mTvlmY4vCug
-    const videoId = url.split("v=")[1];
+    const videoId = url?.split("v=")[1]?.split("&")[0];
     return `https://www.youtube.com/embed/${videoId}`;
   };
 
   const handleToggleSave = async () => {
-    setIsSaving(true);
+    if (!recipeId || !userId || !recipe) return;
 
+    setIsSaving(true);
     try {
       if (isSaved) {
-        // remove from favorites
         const response = await fetch(`${API_URL}/favorites/${userId}/${recipeId}`, {
           method: "DELETE",
         });
         if (!response.ok) throw new Error("Failed to remove recipe");
-
         setIsSaved(false);
       } else {
-        // add to favorites
         const response = await fetch(`${API_URL}/favorites`, {
           method: "POST",
           headers: {
@@ -98,12 +100,17 @@ const RecipeDetailScreen = () => {
           }),
         });
 
-        if (!response.ok) throw new Error("Failed to save recipe");
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Save failed:", errorText);
+          throw new Error("Failed to save recipe");
+        }
+
         setIsSaved(true);
       }
     } catch (error) {
       console.error("Error toggling recipe save:", error);
-      Alert.alert("Error", `Something went wrong. Please try again.`);
+      Alert.alert("Error", `Something went wrong: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -114,7 +121,6 @@ const RecipeDetailScreen = () => {
   return (
     <View style={recipeDetailStyles.container}>
       <ScrollView>
-        {/* HEADER */}
         <View style={recipeDetailStyles.headerContainer}>
           <View style={recipeDetailStyles.imageContainer}>
             <Image
@@ -153,7 +159,6 @@ const RecipeDetailScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Title Section */}
           <View style={recipeDetailStyles.titleSection}>
             <View style={recipeDetailStyles.categoryBadge}>
               <Text style={recipeDetailStyles.categoryText}>{recipe.category}</Text>
@@ -169,7 +174,6 @@ const RecipeDetailScreen = () => {
         </View>
 
         <View style={recipeDetailStyles.contentSection}>
-          {/* QUICK STATS */}
           <View style={recipeDetailStyles.statsContainer}>
             <View style={recipeDetailStyles.statCard}>
               <LinearGradient
@@ -203,10 +207,8 @@ const RecipeDetailScreen = () => {
                 >
                   <Ionicons name="play" size={16} color={COLORS.white} />
                 </LinearGradient>
-
                 <Text style={recipeDetailStyles.sectionTitle}>Video Tutorial</Text>
               </View>
-
               <View style={recipeDetailStyles.videoCard}>
                 <WebView
                   style={recipeDetailStyles.webview}
@@ -218,7 +220,6 @@ const RecipeDetailScreen = () => {
             </View>
           )}
 
-          {/* INGREDIENTS SECTION */}
           <View style={recipeDetailStyles.sectionContainer}>
             <View style={recipeDetailStyles.sectionTitleRow}>
               <LinearGradient
@@ -232,7 +233,6 @@ const RecipeDetailScreen = () => {
                 <Text style={recipeDetailStyles.countText}>{recipe.ingredients.length}</Text>
               </View>
             </View>
-
             <View style={recipeDetailStyles.ingredientsGrid}>
               {recipe.ingredients.map((ingredient, index) => (
                 <View key={index} style={recipeDetailStyles.ingredientCard}>
@@ -248,7 +248,6 @@ const RecipeDetailScreen = () => {
             </View>
           </View>
 
-          {/* INSTRUCTIONS SECTION */}
           <View style={recipeDetailStyles.sectionContainer}>
             <View style={recipeDetailStyles.sectionTitleRow}>
               <LinearGradient
