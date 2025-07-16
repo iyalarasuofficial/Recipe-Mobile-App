@@ -32,7 +32,7 @@ app.post("/api/favorites", async (req, res) => {
             })
             .returning();
         console.log("added")
-        res.status(500).json(newFavorite[0])
+        res.status(201).json(newFavorite[0])
     }
     catch (error) {
         console.log("Error in adding Favorites:", error);
